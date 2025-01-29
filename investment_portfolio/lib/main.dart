@@ -33,9 +33,9 @@ class MyHomePage extends StatefulWidget {
 class _MyHomePageState extends State<MyHomePage> {
   // Investment data (can be replaced with API data later)
   final List<Map<String, dynamic>> investments = [
-    {'name': 'AAPL', 'value': 7500.0, 'color': Colors.blue},
-    {'name': 'TSLA', 'value': 21000.0, 'color': Colors.red},
-    {'name': 'BTC', 'value': 90000.0, 'color': Colors.orange},
+    {'name': 'AAPL', 'units': 50, 'price': 150.0, 'color': Colors.blue},
+    {'name': 'TSLA', 'units': 30, 'price': 700.0, 'color': Colors.red},
+    {'name': 'BTC', 'units': 2, 'price': 45000.0, 'color': Colors.orange},
   ];
 
   @override
@@ -54,19 +54,35 @@ class _MyHomePageState extends State<MyHomePage> {
               'Investment Overview',
               style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
             ),
-            const SizedBox(height: 20),
+            const SizedBox(height: 10),
+
+            // Pie Chart and Table inside a Scrollable View
             Expanded(
-              child: PieChart(
-                PieChartData(
-                  sections: _generatePieChartSections(),
-                  centerSpaceRadius: 50,
-                  sectionsSpace: 3,
-                  borderData: FlBorderData(show: false),
+              child: SingleChildScrollView(
+                child: Column(
+                  children: [
+                    // Pie Chart
+                    SizedBox(
+                      height: 250,
+                      child: PieChart(
+                        PieChartData(
+                          sections: _generatePieChartSections(),
+                          centerSpaceRadius: 50,
+                          sectionsSpace: 3,
+                          borderData: FlBorderData(show: false),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 20),
+                    _buildLegend(),
+                    const SizedBox(height: 20),
+
+                    // Investment Table
+                    _buildInvestmentTable(),
+                  ],
                 ),
               ),
             ),
-            const SizedBox(height: 20),
-            _buildLegend(),
           ],
         ),
       ),
@@ -75,12 +91,13 @@ class _MyHomePageState extends State<MyHomePage> {
 
   // Generate pie chart sections from investment data
   List<PieChartSectionData> _generatePieChartSections() {
-    double totalInvestment = investments.fold(0, (sum, item) => sum + item['value']);
+    double totalInvestment = investments.fold(0, (sum, item) => sum + (item['units'] * item['price']));
 
     return investments.map((investment) {
+      double value = investment['units'] * investment['price'];
       return PieChartSectionData(
-        value: investment['value'],
-        title: '${((investment['value'] / totalInvestment) * 100).toStringAsFixed(1)}%',
+        value: value,
+        title: '${((value / totalInvestment) * 100).toStringAsFixed(1)}%',
         color: investment['color'],
         radius: 80,
         titleStyle: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.white),
@@ -97,10 +114,34 @@ class _MyHomePageState extends State<MyHomePage> {
           children: [
             Container(width: 16, height: 16, color: investment['color']),
             const SizedBox(width: 8),
-            Text('${investment['name']} - \$${investment['value'].toStringAsFixed(2)}'),
+            Text('${investment['name']} - \$${(investment['units'] * investment['price']).toStringAsFixed(2)}'),
           ],
         );
       }).toList(),
+    );
+  }
+
+  // Build the investment table
+  Widget _buildInvestmentTable() {
+    return SingleChildScrollView(
+      scrollDirection: Axis.horizontal,
+      child: DataTable(
+        columns: const [
+          DataColumn(label: Text('Investment')),
+          DataColumn(label: Text('Units')),
+          DataColumn(label: Text('Price')),
+          DataColumn(label: Text('Total Value')),
+        ],
+        rows: investments.map((investment) {
+          double totalValue = investment['units'] * investment['price'];
+          return DataRow(cells: [
+            DataCell(Text(investment['name'])),
+            DataCell(Text('${investment['units']}')),
+            DataCell(Text('\$${investment['price'].toStringAsFixed(2)}')),
+            DataCell(Text('\$${totalValue.toStringAsFixed(2)}')),
+          ]);
+        }).toList(),
+      ),
     );
   }
 }
