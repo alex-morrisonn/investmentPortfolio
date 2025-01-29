@@ -30,15 +30,15 @@ class PortfolioScreen extends StatefulWidget {
 
 class _PortfolioScreenState extends State<PortfolioScreen> {
   final List<Map<String, dynamic>> investments = [
-    {'name': 'BHP.AX', 'value': 510.90, 'category': 'Stock', 'color': Colors.blue},
-    {'name': 'GMG.AX', 'value': 458.77, 'category': 'Stock', 'color': Colors.red},
-    {'name': 'AAPL', 'value': 1500.50, 'category': 'Stock', 'color': Colors.green},
-    {'name': 'TSLA', 'value': 1800.25, 'category': 'Stock', 'color': Colors.orange},
-    {'name': 'BTC', 'value': 728.84, 'category': 'Crypto', 'color': Colors.amber},
+    {'name': 'BHP.AX', 'units': 10, 'stockPrice': 51.09, 'category': 'Stock', 'color': Colors.blue},
+    {'name': 'GMG.AX', 'units': 5, 'stockPrice': 91.75, 'category': 'Stock', 'color': Colors.red},
+    {'name': 'AAPL', 'units': 2, 'stockPrice': 750.25, 'category': 'Stock', 'color': Colors.green},
+    {'name': 'TSLA', 'units': 3, 'stockPrice': 600.75, 'category': 'Stock', 'color': Colors.orange},
+    {'name': 'BTC', 'units': 0.05, 'stockPrice': 45000, 'category': 'Crypto', 'color': Colors.amber},
   ];
 
   double get totalHoldings =>
-      investments.fold(0, (sum, investment) => sum + investment['value']);
+      investments.fold(0, (sum, investment) => sum + (investment['units'] * investment['stockPrice']));
 
   // Function to remove an investment
   void _removeInvestment(int index) {
@@ -48,13 +48,14 @@ class _PortfolioScreenState extends State<PortfolioScreen> {
   }
 
   // Function to add an investment
-  void _addInvestment(String name, String category, double value) {
+  void _addInvestment(String name, String category, double stockPrice, double units) {
     setState(() {
       investments.add({
         'name': name,
-        'value': value,
+        'stockPrice': stockPrice,
+        'units': units,
         'category': category,
-        'color': _getCategoryColor(category), // Assign a color dynamically
+        'color': _getCategoryColor(category),
       });
     });
   }
@@ -134,7 +135,7 @@ class _PortfolioScreenState extends State<PortfolioScreen> {
   List<PieChartSectionData> _generatePieChartSections() {
     return investments.map((investment) {
       return PieChartSectionData(
-        value: investment['value'],
+        value: investment['units'] * investment['stockPrice'],
         title: investment['name'],
         color: investment['color'],
         radius: 80,
@@ -143,62 +144,46 @@ class _PortfolioScreenState extends State<PortfolioScreen> {
     }).toList();
   }
 
-  // Build the investment table with add/remove functionality
+  // Build the investment table with swipe-to-delete functionality
   Widget _buildInvestmentTable() {
-    return SingleChildScrollView(
-      scrollDirection: Axis.horizontal,
-      child: Padding(
-        padding: const EdgeInsets.symmetric(vertical: 10),
-        child: DataTable(
-          columnSpacing: 25,
-          headingRowHeight: 40,
-          dataRowHeight: 50,
-          headingRowColor: MaterialStateColor.resolveWith((states) => Colors.grey[900]!),
-          columns: const [
-            DataColumn(label: Text('Stock', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.white))),
-            DataColumn(label: Text('Category', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.white))),
-            DataColumn(label: Text('Value (A\$)', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.white))),
-            DataColumn(label: Text('Share %', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.white))),
-            DataColumn(label: Text('Actions', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.white))),
-          ],
-          rows: List.generate(investments.length, (index) {
-            var investment = investments[index];
-            return DataRow(
-              cells: [
-                DataCell(Row(
-                  children: [
-                    Container(
-                      width: 14,
-                      height: 14,
-                      decoration: BoxDecoration(
-                        color: investment['color'],
-                        shape: BoxShape.rectangle,
-                        borderRadius: BorderRadius.circular(3),
-                      ),
-                    ),
-                    const SizedBox(width: 10),
-                    Text(investment['name'], style: const TextStyle(color: Colors.white)),
-                  ],
-                )),
-                DataCell(Text(investment['category'], style: const TextStyle(color: Colors.white70))),
-                DataCell(Text("A\$${investment['value'].toStringAsFixed(2)}", style: const TextStyle(color: Colors.white))),
-                DataCell(
-                  Text(
-                    "${((investment['value'] / totalHoldings) * 100).toStringAsFixed(1)}%",
-                    style: const TextStyle(color: Colors.white70),
-                  ),
-                ),
-                DataCell(
-                  IconButton(
-                    icon: const Icon(Icons.delete, color: Colors.red),
-                    onPressed: () => _removeInvestment(index),
-                  ),
-                ),
-              ],
-            );
-          }),
-        ),
-      ),
+    return ListView.separated(
+      itemCount: investments.length,
+      separatorBuilder: (context, index) => const Divider(color: Colors.white24, thickness: 0.5),
+      itemBuilder: (context, index) {
+        var investment = investments[index];
+        double totalValue = investment['units'] * investment['stockPrice'];
+
+        return Dismissible(
+          key: Key(investment['name']),
+          direction: DismissDirection.endToStart,
+          onDismissed: (direction) {
+            _removeInvestment(index);
+          },
+          background: Container(
+            padding: const EdgeInsets.only(right: 20),
+            alignment: Alignment.centerRight,
+            color: Colors.red,
+            child: const Icon(Icons.delete, color: Colors.white, size: 30),
+          ),
+          child: ListTile(
+            leading: Container(
+              width: 14,
+              height: 14,
+              decoration: BoxDecoration(
+                color: investment['color'],
+                shape: BoxShape.rectangle,
+                borderRadius: BorderRadius.circular(3),
+              ),
+            ),
+            title: Text(investment['name'], style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+            subtitle: Text("${investment['category']} • ${investment['units']} units @ A\$${investment['stockPrice'].toStringAsFixed(2)}", style: const TextStyle(color: Colors.white70)),
+            trailing: Text(
+              "A\$${totalValue.toStringAsFixed(2)}",
+              style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.greenAccent),
+            ),
+          ),
+        );
+      },
     );
   }
 
@@ -206,7 +191,8 @@ class _PortfolioScreenState extends State<PortfolioScreen> {
   void _showAddInvestmentDialog() {
     String stockName = "";
     String category = "Stock";
-    double value = 0.0;
+    double stockPrice = 0.0;
+    double units = 0.0;
 
     showDialog(
       context: context,
@@ -228,15 +214,20 @@ class _PortfolioScreenState extends State<PortfolioScreen> {
                 }).toList(),
               ),
               TextField(
-                decoration: const InputDecoration(labelText: "Value (A\$)"),
+                decoration: const InputDecoration(labelText: "Units"),
                 keyboardType: TextInputType.number,
-                onChanged: (val) => value = double.tryParse(val) ?? 0.0,
+                onChanged: (val) => units = double.tryParse(val) ?? 0.0,
+              ),
+              TextField(
+                decoration: const InputDecoration(labelText: "Stock Price (A\$)"),
+                keyboardType: TextInputType.number,
+                onChanged: (val) => stockPrice = double.tryParse(val) ?? 0.0,
               ),
             ],
           ),
           actions: [
             TextButton(onPressed: () => Navigator.pop(context), child: const Text("Cancel")),
-            TextButton(onPressed: () { _addInvestment(stockName, category, value); Navigator.pop(context); }, child: const Text("Add")),
+            TextButton(onPressed: () { _addInvestment(stockName, category, stockPrice, units); Navigator.pop(context); }, child: const Text("Add")),
           ],
         );
       },
