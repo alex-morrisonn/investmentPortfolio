@@ -12,135 +12,155 @@ class MyApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MaterialApp(
       title: 'Investment Portfolio',
-      theme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
-        useMaterial3: true,
+      debugShowCheckedModeBanner: false,
+      theme: ThemeData.dark().copyWith(
+        scaffoldBackgroundColor: Colors.black,
       ),
-      home: const MyHomePage(title: 'Investment Portfolio'),
+      home: const PortfolioScreen(),
     );
   }
 }
 
-class MyHomePage extends StatefulWidget {
-  const MyHomePage({super.key, required this.title});
-
-  final String title;
+class PortfolioScreen extends StatefulWidget {
+  const PortfolioScreen({super.key});
 
   @override
-  State<MyHomePage> createState() => _MyHomePageState();
+  State<PortfolioScreen> createState() => _PortfolioScreenState();
 }
 
-class _MyHomePageState extends State<MyHomePage> {
-  // Investment data (can be replaced with API data later)
+class _PortfolioScreenState extends State<PortfolioScreen> {
   final List<Map<String, dynamic>> investments = [
-    {'name': 'AAPL', 'units': 50, 'price': 150.0, 'color': Colors.blue},
-    {'name': 'TSLA', 'units': 30, 'price': 700.0, 'color': Colors.red},
-    {'name': 'BTC', 'units': 2, 'price': 45000.0, 'color': Colors.orange},
+    {'name': 'BHP.AX', 'value': 510.90, 'category': 'Stock', 'color': Colors.blue},
+    {'name': 'GMG.AX', 'value': 458.77, 'category': 'Stock', 'color': Colors.red},
+    {'name': 'AAPL', 'value': 1500.50, 'category': 'Stock', 'color': Colors.green},
+    {'name': 'TSLA', 'value': 1800.25, 'category': 'Stock', 'color': Colors.orange},
+    {'name': 'BTC', 'value': 728.84, 'category': 'Crypto', 'color': Colors.amber},
   ];
+
+  double get totalHoldings =>
+      investments.fold(0, (sum, investment) => sum + investment['value']);
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        backgroundColor: Theme.of(context).colorScheme.inversePrimary,
-        title: Text(widget.title),
+        title: const Text("Portfolio Diversity"),
+        centerTitle: true,
+        backgroundColor: Colors.black,
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.info_outline),
+            onPressed: () {},
+          )
+        ],
       ),
       body: Padding(
-        padding: const EdgeInsets.all(16.0),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 20), // Global padding for better spacing
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text(
-              'Investment Overview',
-              style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(height: 10),
-
-            // Pie Chart and Table inside a Scrollable View
-            Expanded(
-              child: SingleChildScrollView(
-                child: Column(
-                  children: [
-                    // Pie Chart
-                    SizedBox(
-                      height: 250,
-                      child: PieChart(
-                        PieChartData(
-                          sections: _generatePieChartSections(),
-                          centerSpaceRadius: 50,
-                          sectionsSpace: 3,
-                          borderData: FlBorderData(show: false),
-                        ),
-                      ),
+            // Pie Chart Section with Proper Spacing (No Extra Title)
+            Container(
+              height: 280,
+              padding: const EdgeInsets.symmetric(vertical: 10),
+              child: Stack(
+                alignment: Alignment.center,
+                children: [
+                  PieChart(
+                    PieChartData(
+                      sections: _generatePieChartSections(),
+                      centerSpaceRadius: 80,
+                      sectionsSpace: 3,
+                      borderData: FlBorderData(show: false),
                     ),
-                    const SizedBox(height: 20),
-                    _buildLegend(),
-                    const SizedBox(height: 20),
-
-                    // Investment Table
-                    _buildInvestmentTable(),
-                  ],
-                ),
+                  ),
+                  Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      const Text(
+                        "Total Holdings",
+                        style: TextStyle(color: Colors.white54, fontSize: 14),
+                      ),
+                      Text(
+                        "A\$${totalHoldings.toStringAsFixed(2)}",
+                        style: const TextStyle(color: Colors.white, fontSize: 24, fontWeight: FontWeight.bold),
+                      ),
+                    ],
+                  ),
+                ],
               ),
             ),
+
+            const SizedBox(height: 30), // Extra space before table
+
+            // Investment Table with Proper Spacing
+            Expanded(child: _buildInvestmentTable()),
           ],
         ),
       ),
     );
   }
 
-  // Generate pie chart sections from investment data
+  // Generate pie chart sections for individual stocks
   List<PieChartSectionData> _generatePieChartSections() {
-    double totalInvestment = investments.fold(0, (sum, item) => sum + (item['units'] * item['price']));
-
     return investments.map((investment) {
-      double value = investment['units'] * investment['price'];
       return PieChartSectionData(
-        value: value,
-        title: '${((value / totalInvestment) * 100).toStringAsFixed(1)}%',
+        value: investment['value'],
+        title: investment['name'],
         color: investment['color'],
         radius: 80,
-        titleStyle: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.white),
+        titleStyle: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: Colors.white),
       );
     }).toList();
   }
 
-  // Build a legend for the pie chart
-  Widget _buildLegend() {
-    return Column(
-      children: investments.map((investment) {
-        return Row(
-          mainAxisAlignment: MainAxisAlignment.start,
-          children: [
-            Container(width: 16, height: 16, color: investment['color']),
-            const SizedBox(width: 8),
-            Text('${investment['name']} - \$${(investment['units'] * investment['price']).toStringAsFixed(2)}'),
-          ],
-        );
-      }).toList(),
-    );
-  }
-
-  // Build the investment table
+  // Build the investment table with colored boxes and better row spacing
   Widget _buildInvestmentTable() {
     return SingleChildScrollView(
       scrollDirection: Axis.horizontal,
-      child: DataTable(
-        columns: const [
-          DataColumn(label: Text('Investment')),
-          DataColumn(label: Text('Units')),
-          DataColumn(label: Text('Price')),
-          DataColumn(label: Text('Total Value')),
-        ],
-        rows: investments.map((investment) {
-          double totalValue = investment['units'] * investment['price'];
-          return DataRow(cells: [
-            DataCell(Text(investment['name'])),
-            DataCell(Text('${investment['units']}')),
-            DataCell(Text('\$${investment['price'].toStringAsFixed(2)}')),
-            DataCell(Text('\$${totalValue.toStringAsFixed(2)}')),
-          ]);
-        }).toList(),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 10), // Add space around the table
+        child: DataTable(
+          columnSpacing: 25, // More spacing between columns
+          headingRowHeight: 40, // Increased header row height
+          dataRowHeight: 50, // More height for better row spacing
+          headingRowColor: MaterialStateColor.resolveWith((states) => Colors.grey[900]!),
+          columns: const [
+            DataColumn(label: Text('Stock', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.white))),
+            DataColumn(label: Text('Category', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.white))),
+            DataColumn(label: Text('Value (A\$)', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.white))),
+            DataColumn(label: Text('Share %', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.white))),
+          ],
+          rows: investments.map((investment) {
+            return DataRow(
+              cells: [
+                DataCell(Row(
+                  children: [
+                    Container(
+                      width: 14,
+                      height: 14,
+                      decoration: BoxDecoration(
+                        color: investment['color'],
+                        shape: BoxShape.rectangle,
+                        borderRadius: BorderRadius.circular(3),
+                      ),
+                    ),
+                    const SizedBox(width: 10), // Better spacing between box and text
+                    Text(investment['name'], style: const TextStyle(color: Colors.white)),
+                  ],
+                )),
+                DataCell(Text(investment['category'], style: const TextStyle(color: Colors.white70))),
+                DataCell(Text("A\$${investment['value'].toStringAsFixed(2)}", style: const TextStyle(color: Colors.white))),
+                DataCell(
+                  Text(
+                    "${((investment['value'] / totalHoldings) * 100).toStringAsFixed(1)}%",
+                    style: const TextStyle(color: Colors.white70),
+                  ),
+                ),
+              ],
+            );
+          }).toList(),
+        ),
       ),
     );
   }
