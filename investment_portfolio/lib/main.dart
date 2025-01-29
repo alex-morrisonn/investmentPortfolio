@@ -40,6 +40,37 @@ class _PortfolioScreenState extends State<PortfolioScreen> {
   double get totalHoldings =>
       investments.fold(0, (sum, investment) => sum + investment['value']);
 
+  // Function to remove an investment
+  void _removeInvestment(int index) {
+    setState(() {
+      investments.removeAt(index);
+    });
+  }
+
+  // Function to add an investment
+  void _addInvestment(String name, String category, double value) {
+    setState(() {
+      investments.add({
+        'name': name,
+        'value': value,
+        'category': category,
+        'color': _getCategoryColor(category), // Assign a color dynamically
+      });
+    });
+  }
+
+  // Function to get color based on category
+  Color _getCategoryColor(String category) {
+    switch (category.toLowerCase()) {
+      case 'stock':
+        return Colors.blueAccent;
+      case 'crypto':
+        return Colors.amberAccent;
+      default:
+        return Colors.grey;
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -49,17 +80,16 @@ class _PortfolioScreenState extends State<PortfolioScreen> {
         backgroundColor: Colors.black,
         actions: [
           IconButton(
-            icon: const Icon(Icons.info_outline),
-            onPressed: () {},
-          )
+            icon: const Icon(Icons.add),
+            onPressed: () => _showAddInvestmentDialog(),
+          ),
         ],
       ),
       body: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 20), // Global padding for better spacing
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 20),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Pie Chart Section with Proper Spacing (No Extra Title)
             Container(
               height: 280,
               padding: const EdgeInsets.symmetric(vertical: 10),
@@ -91,17 +121,16 @@ class _PortfolioScreenState extends State<PortfolioScreen> {
               ),
             ),
 
-            const SizedBox(height: 30), // Extra space before table
+            const SizedBox(height: 30),
 
-            // Investment Table with Proper Spacing
-            Expanded(child: _buildInvestmentTable()),
+            Expanded(child: _buildInvestmentTable()), // Table section
           ],
         ),
       ),
     );
   }
 
-  // Generate pie chart sections for individual stocks
+  // Generate pie chart sections dynamically
   List<PieChartSectionData> _generatePieChartSections() {
     return investments.map((investment) {
       return PieChartSectionData(
@@ -114,24 +143,26 @@ class _PortfolioScreenState extends State<PortfolioScreen> {
     }).toList();
   }
 
-  // Build the investment table with colored boxes and better row spacing
+  // Build the investment table with add/remove functionality
   Widget _buildInvestmentTable() {
     return SingleChildScrollView(
       scrollDirection: Axis.horizontal,
       child: Padding(
-        padding: const EdgeInsets.symmetric(vertical: 10), // Add space around the table
+        padding: const EdgeInsets.symmetric(vertical: 10),
         child: DataTable(
-          columnSpacing: 25, // More spacing between columns
-          headingRowHeight: 40, // Increased header row height
-          dataRowHeight: 50, // More height for better row spacing
+          columnSpacing: 25,
+          headingRowHeight: 40,
+          dataRowHeight: 50,
           headingRowColor: MaterialStateColor.resolveWith((states) => Colors.grey[900]!),
           columns: const [
             DataColumn(label: Text('Stock', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.white))),
             DataColumn(label: Text('Category', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.white))),
             DataColumn(label: Text('Value (A\$)', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.white))),
             DataColumn(label: Text('Share %', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.white))),
+            DataColumn(label: Text('Actions', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.white))),
           ],
-          rows: investments.map((investment) {
+          rows: List.generate(investments.length, (index) {
+            var investment = investments[index];
             return DataRow(
               cells: [
                 DataCell(Row(
@@ -145,7 +176,7 @@ class _PortfolioScreenState extends State<PortfolioScreen> {
                         borderRadius: BorderRadius.circular(3),
                       ),
                     ),
-                    const SizedBox(width: 10), // Better spacing between box and text
+                    const SizedBox(width: 10),
                     Text(investment['name'], style: const TextStyle(color: Colors.white)),
                   ],
                 )),
@@ -157,11 +188,58 @@ class _PortfolioScreenState extends State<PortfolioScreen> {
                     style: const TextStyle(color: Colors.white70),
                   ),
                 ),
+                DataCell(
+                  IconButton(
+                    icon: const Icon(Icons.delete, color: Colors.red),
+                    onPressed: () => _removeInvestment(index),
+                  ),
+                ),
               ],
             );
-          }).toList(),
+          }),
         ),
       ),
+    );
+  }
+
+  // Show Add Investment Dialog
+  void _showAddInvestmentDialog() {
+    String stockName = "";
+    String category = "Stock";
+    double value = 0.0;
+
+    showDialog(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          title: const Text("Add Investment"),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TextField(
+                decoration: const InputDecoration(labelText: "Stock Name"),
+                onChanged: (val) => stockName = val,
+              ),
+              DropdownButton<String>(
+                value: category,
+                onChanged: (newValue) => setState(() => category = newValue!),
+                items: ["Stock", "Crypto"].map((cat) {
+                  return DropdownMenuItem(value: cat, child: Text(cat));
+                }).toList(),
+              ),
+              TextField(
+                decoration: const InputDecoration(labelText: "Value (A\$)"),
+                keyboardType: TextInputType.number,
+                onChanged: (val) => value = double.tryParse(val) ?? 0.0,
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(onPressed: () => Navigator.pop(context), child: const Text("Cancel")),
+            TextButton(onPressed: () { _addInvestment(stockName, category, value); Navigator.pop(context); }, child: const Text("Add")),
+          ],
+        );
+      },
     );
   }
 }
